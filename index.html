@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>体检报告汇总（时间线）</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#ffffff; --ink:#1f2430; --sub:#6b7280;
+    --line:#e5e7ef; --accent:#3b82f6; --accent-soft:#eef4ff;
+    --warn:#e11d48; --warn-soft:#fff1f3; --ok:#16a34a; --up:#2563eb;
+    --ok-soft:#ecfdf5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.6;padding-bottom:80px}
+  .wrap{max-width:960px;margin:0 auto;padding:24px 20px}
+  header{padding:36px 20px 28px;background:linear-gradient(135deg,#3b82f6,#2563eb);
+         color:#fff;border-radius:0 0 28px 28px;text-align:center}
+  header h1{font-size:26px;font-weight:700}
+  header p{opacity:.92;margin-top:8px;font-size:14px}
+  .stats{margin-top:18px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .stats .chip{background:rgba(255,255,255,.16);padding:6px 14px;border-radius:999px;font-size:13px}
+  .section{margin-top:36px}
+  .section .tbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .badge{width:12px;height:12px;border-radius:50%}
+  .badge.blue{background:#3b82f6}.badge.purple{background:#8b5cf6}
+  .badge.amber{background:#f59e0b}.badge.slate{background:#64748b}
+  .tbar h2{font-size:20px}
+  .tbar .date{color:var(--sub);font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+        padding:20px;margin-bottom:18px;box-shadow:0 2px 10px rgba(31,36,48,.04)}
+  .card h3{font-size:16px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .tag{font-size:12px;background:var(--accent-soft);color:var(--accent);
+       padding:2px 10px;border-radius:999px;font-weight:500}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line)}
+  th{background:#f9fafc;color:var(--sub);font-weight:600;white-space:nowrap}
+  td .ref{color:var(--sub);font-size:12px}
+  tr.low td{background:var(--warn-soft);color:var(--warn)}
+  tr.ok td{background:var(--ok-soft);color:var(--ok)}
+  tr.up td{background:#f0f6ff;color:var(--up)}
+  .flag{font-weight:600}
+  .trend th, .trend td{text-align:center;white-space:nowrap}
+  .trend .itm{text-align:left;font-weight:600;color:var(--ink)}
+  .trend .ref{display:block;font-weight:400;font-size:11px;color:var(--sub)}
+  .day-hd{background:var(--accent-soft);color:var(--accent)}
+  .delta{font-size:11px;margin-left:2px}
+  .delta.up{color:var(--warn)} .delta.down{color:var(--ok)} .delta.same{color:var(--sub)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;font-size:12px;color:var(--sub)}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .desc{margin-top:12px;padding:14px;background:#f8fafc;border-left:4px solid var(--accent);
+        border-radius:8px;font-size:14px;color:#334155;white-space:pre-wrap}
+  .desc b{color:var(--ink)}
+  .note{margin-top:12px;font-size:13px;color:var(--sub);background:#fffbeb;
+        border:1px solid #fde68a;padding:10px 14px;border-radius:8px}
+  .imgs{margin-top:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .imgs figure{background:#f1f5f9;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .imgs img{width:100%;display:block;cursor:zoom-in;transition:transform .2s}
+  .imgs img:hover{transform:scale(1.05)}
+  .imgs figcaption{padding:6px 10px;font-size:12px;color:var(--sub);text-align:center}
+  .summary{background:var(--accent-soft);border:1px solid #cddAff}
+  .summary ul{list-style:none;margin-top:12px}
+  .summary li{padding:6px 0;padding-left:22px;position:relative;font-size:14px}
+  .summary li::before{content:"◆";position:absolute;left:4px;color:var(--accent);font-size:11px;top:10px}
+  footer{text-align:center;color:var(--sub);font-size:12px;margin-top:40px}
+  @media(max-width:600px){header h1{font-size:21px}th,td{font-size:12px;padding:6px 6px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>体检报告汇总 · 时间线</h1>
+  <p>体检人：颜康福（男，55岁）｜ 上饶市人民医院 等 ｜ 2026年3月 — 2026年10月</p>
+  <div class="stats">
+    <span class="chip">🩸 血常规 · 3 次</span>
+    <span class="chip">🧪 血清/生化 · 多批次</span>
+    <span class="chip">🫀 凝血功能 · 2 次</span>
+    <span class="chip">🖥 超声 · 5 次</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ===== 核心结论 ===== -->
+  <section class="section">
+    <div class="tbar"><span class="badge slate"></span><h2>核心结论</h2></div>
+    <div class="card summary">
+      <ul>
+        <li>肝硬化（F4 纤维化）持续存在，肝脏弹性多次显著超标（2026.3：15.1 kPa → 2026.7：13.22 kPa）。</li>
+        <li>乙肝表面抗原 HBsAg 持续强阳性且滴度极高，e抗原阴性（小三阳倾向），病毒载量 HBV-DNA &lt;50 处于低水平。</li>
+        <li>血小板进行性下降（98 → 93 → 79，参考 125–350），伴 MPV/PDW/P-LCR 升高，符合肝硬化门脉高压性脾功能亢进。</li>
+        <li>脾大（46mm）+ 门静脉增宽（13mm），门脉高压表现。</li>
+        <li>胆囊结石/泥沙样结石随时间变化（21×10 → 46.9×5.5 → 32×13 mm）。</li>
+        <li>2026.7 肝纤维化四项中血清透明质酸 HA 103.93 升高（参考 &lt;100）。</li>
+        <li>肿瘤标志物 AFP / CEA / CA19-9 均处于正常范围。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== 跨时间趋势对比 ===== -->
+  <section class="section">
+    <div class="tbar"><span class="badge slate"></span><h2>跨时间趋势对比</h2></div>
+    <div class="card">
+      <div class="legend">
+        <span><i class="dot" style="background:#e11d48"></i>&uarr; 相对上次升高</span>
+        <span><i class="dot" style="background:#16a34a"></i>&darr; 相对上次降低</span>
+        <span><i class="dot" style="background:#6b7280"></i>= 基本持平</span>
+      </div>
+      <table class="trend">
+        <tr>
+          <th class="itm">项目（参考范围）</th>
+          <th class="day-hd">2026.3.23</th>
+          <th class="day-hd">2026.7.27</th>
+          <th class="day-hd">2026.10.12</th>
+          <th>趋势</th>
+        </tr>
+        <tr>
+          <td class="itm">血小板 PLT<span class="ref">125-350 ×10⁹/L</span></td>
+          <td class="low"><b>98</b></td>
+          <td class="low">93<span class="delta down">&darr;</span></td>
+          <td class="low"><b>79</b><span class="delta down">&darr;</span></td>
+          <td>持续下降</td>
+        </tr>
+        <tr>
+          <td class="itm">白细胞 WBC<span class="ref">3.5-9.5 ×10⁹/L</span></td>
+          <td>4.99</td>
+          <td>4.39<span class="delta down">&darr;</span></td>
+          <td>4.61<span class="delta up">&uarr;</span></td>
+          <td>小幅波动</td>
+        </tr>
+        <tr>
+          <td class="itm">血红蛋白 HGB<span class="ref">130-175 g/L</span></td>
+          <td>168</td>
+          <td>154<span class="delta down">&darr;</span></td>
+          <td>151<span class="delta down">&darr;</span></td>
+          <td>逐渐下降</td>
+        </tr>
+        <tr>
+          <td class="itm">ALT 谷丙转氨酶<span class="ref">0-50 U/L</span></td>
+          <td>50</td>
+          <td>20<span class="delta down">&darr;</span></td>
+          <td>27<span class="delta up">&uarr;</span></td>
+          <td>先降后升</td>
+        </tr>
+        <tr>
+          <td class="itm">AST 谷草转氨酶<span class="ref">0-42 U/L</span></td>
+          <td>38</td>
+          <td>23<span class="delta down">&darr;</span></td>
+          <td>26<span class="delta up">&uarr;</span></td>
+          <td>先降后升</td>
+        </tr>
+        <tr>
+          <td class="itm">总胆红素 TBIL<span class="ref">&lt;22 μmol/L</span></td>
+          <td>21.60</td>
+          <td>16.00<span class="delta down">&darr;</span></td>
+          <td>15.36<span class="delta down">&darr;</span></td>
+          <td>持续下降</td>
+        </tr>
+        <tr>
+          <td class="itm">直接胆红素 DBIL<span class="ref">&lt;6.9 μmol/L</span></td>
+          <td class="up"><b>7.00</b></td>
+          <td>4.60<span class="delta down">&darr;</span></td>
+          <td>4.39<span class="delta down">&darr;</span></td>
+          <td>恢复正常</td>
+        </tr>
+        <tr>
+          <td class="itm">GGT 谷氨酰转肽酶<span class="ref">2-73 U/L</span></td>
+          <td>57</td>
+          <td>34<span class="delta down">&darr;</span></td>
+          <td>41<span class="delta up">&uarr;</span></td>
+          <td>先降后升</td>
+        </tr>
+        <tr>
+          <td class="itm">碱性磷酸酶 ALP<span class="ref">38-126 U/L</span></td>
+          <td>92</td>
+          <td>83<span class="delta down">&darr;</span></td>
+          <td>78<span class="delta down">&darr;</span></td>
+          <td>持续下降</td>
+        </tr>
+        <tr>
+          <td class="itm">乳酸脱氢酶 LDH<span class="ref">109-246 U/L</span></td>
+          <td>152</td>
+          <td>156<span class="delta up">&uarr;</span></td>
+          <td>156<span class="delta same">=</span></td>
+          <td>基本平稳</td>
+        </tr>
+        <tr>
+          <td class="itm">总蛋白 TP<span class="ref">60-85 g/L</span></td>
+          <td>74.30</td>
+          <td>73.80<span class="delta down">&darr;</span></td>
+          <td>73.30<span class="delta down">&darr;</span></td>
+          <td>缓慢下降</td>
+        </tr>
+        <tr>
+          <td class="itm">白蛋白 ALB<span class="ref">35-50 g/L</span></td>
+          <td>44.62</td>
+          <td>43.84<span class="delta down">&darr;</span></td>
+          <td>45.10<span class="delta up">&uarr;</span></td>
+          <td>基本平稳</td>
+        </tr>
+        <tr>
+          <td class="itm">肌酐 CREA<span class="ref">45-104 μmol/L</span></td>
+          <td>63</td>
+          <td>69<span class="delta up">&uarr;</span></td>
+          <td>71<span class="delta up">&uarr;</span></td>
+          <td>逐渐上升</td>
+        </tr>
+        <tr>
+          <td class="itm">尿酸 URIC<span class="ref">170-430 μmol/L</span></td>
+          <td>293</td>
+          <td>306<span class="delta up">&uarr;</span></td>
+          <td>299<span class="delta down">&darr;</span></td>
+          <td>小幅波动</td>
+        </tr>
+      </table>
+      <div class="note" style="margin-top:14px">🩸 <b>血小板</b>从 98 → 93 → 79 持续下降，且 10.12 为历次最低，需重点关注。多数肝功能指标处于正常区间，转氨酶较 3 月明显回落。</div>
+    </div>
+
+    <div class="card">
+      <h3>� 逐项解读 · 专业建议</h3>
+      <div class="desc" style="border-left-color:#e11d48">
+<b style="color:#e11d48">1｜血小板 PLT（98 → 93 → 79，参考 125-350）　⚠️ 需重点关注</b>
+解读：呈进行性下降，且10.12为历次最低。多见于肝硬化门静脉高压引起的脾功能亢进（脾脏对血小板破坏增多），也需排除骨髓造血功能受抑。血小板持续走低会带来出血风险，若降至 50 以下风险明显升高。
+建议：定期（每1-3个月）复查血常规；注意有无牙龈出血、皮肤瘀斑、黑便等；避免磕碰；必要时消化科/血液科评估，考虑胃镜下套扎食管静脉曲张、脾动脉栓塞等措施；血小板过低或发生出血时立即就医。
+
+<b style="color:#16a34a">2｜血红蛋白 HGB（168 → 154 → 151，正常 130-175）　✅ 仍在正常区间</b>
+解读：值较高位缓慢回落，仍处于正常范围。肝硬化患者可能因门脉高压致消化道隐性失血、或脾功亢进的轻度消耗。
+建议：随访血常规；如继续下降，可查血清铁蛋白和粪便隐血，排查隐性出血。
+
+<b style="color:#16a34a">3｜ALT（50 → 20 → 27）与 AST（38 → 23 → 26）　✅ 炎症明显减轻</b>
+解读：转氨酶由3月的临界偏高/偏高，回落并稳定在正常范围，提示肝细胞炎症较前明显减轻，抗病毒/保肝治疗有效。
+建议：维持抗病毒治疗（如适用），规律复查肝功能；避免擅自停药。
+
+<b style="color:#16a34a">4｜总胆红素 TBIL（21.6 → 16.0 → 15.36）与直接胆红素 DBIL（7.0 → 4.6 → 4.39）　✅ 黄疸好转</b>
+解读：3月胆红素偏高，后持续下降并恢复正常，提示胆汁分泌与排泄功能改善。
+建议：联合转氨酶、白蛋白、肝纤四项综合评估肝脏储备，定期复查。
+
+<b style="color:#2563eb">5｜肌酐 CREA（63 → 69 → 71，正常 45-104）　🏷 正常范围但呈上升趋势</b>
+解读：虽仍在正常范围，但三次呈上升趋势。可能与年龄、用药或肾血流量变化相关。肝硬化患者需警惕肝肾综合征。
+建议：复查肾功能（血肌酐、尿素氮、尿常规）；慎用肾毒性药物；维持水化。
+
+<b>6｜其余项目（WBC 4.99→4.39→4.61、GGT、ALP、LDH、TP、ALB、URIC）</b>
+均处于正常范围，波动幅度小，属正常生理波动。白蛋白稳定在正常值是肝脏合成功能良好的标志，继续保持均衡营养与充足蛋白摄入即可。
+
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>�� 肝脏弹性 / 超声结构对比</h3>
+      <table class="trend">
+        <tr><th class="itm">项目</th><th class="day-hd">2026.3.24</th><th class="day-hd">2026.4.23</th><th class="day-hd">2026.7.28</th><th>趋势</th></tr>
+        <tr>
+          <td class="itm">肝脏硬度<span class="ref">F4 硬化标准 &gt;11.9 kPa</span></td>
+          <td class="low"><b>15.1 kPa</b></td>
+          <td class="ref">—</td>
+          <td class="low">13.22 kPa<span class="delta down">&darr;</span></td>
+          <td>仍为 F4 硬化</td>
+        </tr>
+        <tr>
+          <td class="itm">脾脏厚度<span class="ref">正常 &lt;40 mm</span></td>
+          <td>44 mm</td>
+          <td>43 mm</td>
+          <td>46 mm<span class="delta up">&uarr;</span></td>
+          <td>持续脾大</td>
+        </tr>
+        <tr>
+          <td class="itm">门静脉内径<span class="ref">正常 10-12 mm</span></td>
+          <td>—</td>
+          <td>11 mm</td>
+          <td>13 mm<span class="delta up">&uarr;</span></td>
+          <td>增宽（门脉高压）</td>
+        </tr>
+        <tr>
+          <td class="itm">胆囊结石<span class="ref">—</span></td>
+          <td>21×10 mm</td>
+          <td>46.9×5.5 mm</td>
+          <td>32×13 mm</td>
+          <td>结石持续存在</td>
+        </tr>
+      </table>
+      <div class="note" style="margin-top:14px">💡 肝脏硬度虽由 15.1 → 13.22 kPa 有所回落，但仍处于 F4（肝硬化）水平；脾大与门静脉增宽提示门脉高压持续存在。</div>
+      <div class="desc" style="margin-top:12px;border-left-color:#8b5cf6">
+<b style="color:#8b5cf6">肝脏弹性（15.1 → 13.22 kPa，F4 标准 &gt;11.9）</b>
+解读：肝脏硬度较前有所回落，但仍达到 F4（肝硬化）级别，提示肝纤维化已为不可逆的硬化阶段。"略微改善"并不等于逆转，需长期管理。
+建议：坚持抗病毒治疗、完全戒酒、避免肝毒性药物，控制体重与脂肪肝；定期（每6-12个月）复查肝脏弹性与甲胎蛋白+超声，监测肝癌风险。
+
+<b style="color:#e11d48">脾脏厚度（44 → 43 → 46mm，正常 &lt;40）＋ 门静脉内径（11 → 13mm，正常 10-12）</b>
+解读：脾脏持续肿大、门静脉增宽，是门静脉高压持续存在的直接体现，也是血小板下降的根本原因。
+建议：定期胃镜检查评估食管胃底静脉曲张，必要时套扎预防出血；关注血小板与出血表现；消化内科随访随症处理门脉高压并发症。
+
+<b style="color:#2563eb">胆囊结石（21×10 → 46.9×5.5 → 32×13mm）</b>
+解读：胆囊结石/泥沙样结石持续存在，若反复引起右上腹痛、发热或黄疸，需警惕急性胆囊炎。
+建议：低脂清淡饮食；如出现右上腹痛、发热、黄疸及时就诊；咨询肝胆外科是否需择期介入/取石治疗。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2026.3.23 ============ -->
+  <section class="section">
+    <div class="tbar"><span class="badge blue"></span><h2>血常规 · 生化</h2><span class="date">2026.3.23</span></div>
+
+    <div class="card">
+      <h3>🩸 全血（血常规）<span class="tag">迈瑞 BC8000</span></h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr><td>WBC 白细胞</td><td>4.99</td><td>10⁹/L</td><td class="ref">3.5-9.5</td></tr>
+        <tr><td>RBC 红细胞</td><td>5.55</td><td>10¹²/L</td><td class="ref">4.3-5.8</td></tr>
+        <tr><td>HGB 血红蛋白</td><td>168</td><td>g/L</td><td class="ref">130-175</td></tr>
+        <tr class="low"><td>PLT 血小板</td><td class="flag">98 ↓</td><td>10⁹/L</td><td class="ref">125-350</td></tr>
+        <tr><td>NEU% 中性粒细胞%</td><td>66.0</td><td>%</td><td class="ref">40-75</td></tr>
+        <tr><td>LYM% 淋巴细胞%</td><td>26.8</td><td>%</td><td class="ref">17-50</td></tr>
+        <tr><td>MCV 平均红细胞体积</td><td>92.1</td><td>fL</td><td class="ref">82-100</td></tr>
+        <tr><td>HCT 红细胞压积</td><td>51.1</td><td>%</td><td class="ref">32-55</td></tr>
+        <tr><td>PCT 血小板压积</td><td>0.13</td><td>%</td><td class="ref">0.108-0.282</td></tr>
+        <tr class="up"><td>MPV 平均血小板体积</td><td class="flag">13.31 ↑</td><td>fL</td><td class="ref">6.5-12</td></tr>
+        <tr><td>PDW 血小板分布宽度</td><td>16.6</td><td>%</td><td class="ref">9-17</td></tr>
+        <tr class="up"><td>P-LCR 大型血小板比率</td><td class="flag">49.41 ↑</td><td>%</td><td class="ref">11-45</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.3.23-全血.png" alt="2026.3.23 全血"><figcaption>全血</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🧪 血清1 · 乙肝表面抗原 <span class="tag">迈瑞 CL-13000</span></h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr class="low"><td>HBsAg 乙肝表面抗原</td><td class="flag">947.632 ↑</td><td>IU/ml</td><td class="ref">&lt;0.05</td></tr>
+      </table>
+      <div class="note">显著升高，HBsAg 强阳性。诊断：肝硬化。</div>
+      <div class="imgs"><figure><img src="assets/2026.3.23-血清.png" alt="2026.3.23 血清"><figcaption>血清 · 乙肝表面抗原</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🧪 血清2 · 肝功能组合</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr><td>TBIL 总胆红素</td><td>21.60</td><td>μmol/L</td><td class="ref">&lt;21</td></tr>
+        <tr class="up"><td>DBIL 直接胆红素</td><td class="flag">7.00 ↑</td><td>μmol/L</td><td class="ref">&lt;6.8</td></tr>
+        <tr><td>ALT 谷丙转氨酶</td><td>50</td><td>U/L</td><td class="ref">9-50</td></tr>
+        <tr><td>AST 谷草转氨酶</td><td>38</td><td>U/L</td><td class="ref">15-40</td></tr>
+        <tr><td>GGT 谷氨酰转肽酶</td><td>57</td><td>U/L</td><td class="ref">10-60</td></tr>
+        <tr><td>ALP 碱性磷酸酶</td><td>92</td><td>U/L</td><td class="ref">45-125</td></tr>
+        <tr><td>LDH 乳酸脱氢酶</td><td>152</td><td>U/L</td><td class="ref">109-245</td></tr>
+        <tr><td>TP 总蛋白</td><td>74.30</td><td>g/L</td><td class="ref">60-85</td></tr>
+        <tr><td>ALB 白蛋白</td><td>44.62</td><td>g/L</td><td class="ref">35-55</td></tr>
+        <tr><td>BUN 尿素氮</td><td>6.04</td><td>mmol/L</td><td class="ref">1.7-8.3</td></tr>
+        <tr><td>CREA 肌酐</td><td>63</td><td>μmol/L</td><td class="ref">57-97</td></tr>
+        <tr><td>URIC 尿酸</td><td>293</td><td>μmol/L</td><td class="ref">202-416</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.3.23-血清2.png" alt="2026.3.23 血清2"><figcaption>血清 · 肝功能组合</figcaption></figure></div>
+    </div>
+  </section>
+
+  <!-- ============ 2026.3.24 ============ -->
+  <section class="section">
+    <div class="tbar"><span class="badge amber"></span><h2>超声检查</h2><span class="date">2026.3.24</span></div>
+
+    <div class="card">
+      <h3>🖥 肝胆胰脾超声</h3>
+      <div class="desc">肠气干扰，左肝显示不清；肝包膜凹凸不平，实质回声增粗；胆囊壁毛糙，胆囊颈口多发细小强回声光团约 21×10 mm；脾厚 44mm、长径 134mm、脾静脉宽 10mm；胰尾显示不清。
+<b>提示：肝硬化声像考虑；胆囊泥沙样结石；脾大。</b></div>
+      <div class="imgs"><figure><img src="assets/2026.3.24-超声（肝胆胰脾）.png" alt="2026.3.24 超声肝胆胰脾"><figcaption>肝胆胰脾</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🖥 肝脏弹性成像</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>参考</th></tr>
+        <tr class="low"><td>肝脏硬度中位数</td><td class="flag">15.1 kPa（2.2 m/s）</td><td class="ref">Fibrosis 分级</td></tr>
+        <tr class="low"><td>纤维化程度</td><td class="flag">符合 F4（硬化）</td><td class="ref">—</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.3.24-超声（肝脏纤维）.png" alt="2026.3.24 肝脏弹性"><figcaption>肝脏弹性成像</figcaption></figure></div>
+    </div>
+  </section>
+
+  <!-- ============ 2026.4.23 ============ -->
+  <section class="section">
+    <div class="tbar"><span class="badge amber"></span><h2>超声检查</h2><span class="date">2026.4.23 · 广丰区人民医院</span></div>
+    <div class="card">
+      <h3>🖥 肝胆胰脾超声</h3>
+      <div class="desc">肝上界第六肋、体积略小，实质回声减低光点增粗，门脉主干内径 11mm；胆囊壁稍毛糙，囊内强回声团约 46.9×5.5mm 伴声影；脾厚 43mm；胰体显示正常。
+<b>诊断：慢性肝病图像；胆囊多发结石；脾稍大。</b></div>
+      <div class="imgs"><figure><img src="assets/2026.4.23-超声（肝胆胰脾）.png" alt="2026.4.23 超声"><figcaption>肝胆胰脾</figcaption></figure></div>
+    </div>
+  </section>
+
+  <!-- ============ 2026.7.27 ============ -->
+  <section class="section">
+    <div class="tbar"><span class="badge purple"></span><h2>血常规 · 血清群组</h2><span class="date">2026.7.27</span></div>
+
+    <div class="card">
+      <h3>🩸 全血（血常规）</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr><td>WBC 白细胞</td><td>4.39</td><td>10⁹/L</td><td class="ref">3.5-9.5</td></tr>
+        <tr><td>RBC 红细胞</td><td>5.07</td><td>10¹²/L</td><td class="ref">4.3-5.8</td></tr>
+        <tr><td>HGB 血红蛋白</td><td>154</td><td>g/L</td><td class="ref">130-175</td></tr>
+        <tr class="low"><td>PLT 血小板</td><td class="flag">93 ↓</td><td>10⁹/L</td><td class="ref">125-350</td></tr>
+        <tr><td>NEU% 中性粒细胞%</td><td>63.4</td><td>%</td><td class="ref">40-75</td></tr>
+        <tr><td>LYM% 淋巴细胞%</td><td>28.8</td><td>%</td><td class="ref">17-50</td></tr>
+        <tr><td>PCT 血小板压积</td><td>0.11</td><td>%</td><td class="ref">0.108-0.282</td></tr>
+        <tr><td>RDW-SD/CV</td><td>41.9 / 12.6</td><td>—</td><td class="ref">35-56 / 11-16</td></tr>
+        <tr><td>MPV 平均血小板体积</td><td>11.8</td><td>fL</td><td class="ref">6.5-12</td></tr>
+        <tr><td>PDW 血小板分布宽度</td><td>17.11</td><td>%</td><td class="ref">9-17</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.7.27-全血.png" alt="2026.7.27 全血"><figcaption>全血</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🧪 血清1 · HBV-DNA 乙肝病毒定量</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>参考</th></tr>
+        <tr class="ok"><td>HBV-DNA</td><td class="flag">&lt;50（低于检测下限）</td><td class="ref">0-50</td></tr>
+      </table>
+      <div class="note">病毒载量低，处于检测下限以下。</div>
+      <div class="imgs"><figure><img src="assets/2026.7.27-血清.png" alt="HBV-DNA"><figcaption>血清 · HBV-DNA</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🧪 血清2 · 肿瘤标志物</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr class="ok"><td>CA19-9 糖类抗原</td><td>18.25</td><td>U/mL</td><td class="ref">0-39</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.7.27-血清2.png" alt="CA19-9"><figcaption>CA19-9</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🧪 血清3 · 肿瘤标志物</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr class="ok"><td>AFP 甲胎蛋白</td><td>2.70</td><td>ng/ml</td><td class="ref">0.5-8.1</td></tr>
+        <tr class="ok"><td>CEA 癌胚抗原</td><td>2.48</td><td>ng/ml</td><td class="ref">0.3-5</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.7.27-血清3.png" alt="AFP/CEA"><figcaption>AFP / CEA</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🧪 血清4 · 肝纤维化四项</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr class="up"><td>HA 血清透明质酸</td><td class="flag">103.93 ↑</td><td>ng/mL</td><td class="ref">&lt;100</td></tr>
+        <tr><td>PIIINP Ⅲ型前胶原N端肽</td><td>8.64</td><td>ng/mL</td><td class="ref">0-30</td></tr>
+        <tr><td>Col IV Ⅳ型胶原</td><td>25.05</td><td>ng/mL</td><td class="ref">&lt;30</td></tr>
+        <tr><td>LN 层粘连蛋白</td><td>9.54</td><td>ng/mL</td><td class="ref">&lt;50</td></tr>
+      </table>
+      <div class="note">透明质酸升高，提示肝纤维化活动。</div>
+      <div class="imgs"><figure><img src="assets/2026.7.27-血清4.png" alt="肝纤维化四项"><figcaption>肝纤维化四项</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🧪 血清5 · 胆红素 / 蛋白</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr><td>IBIL 间接胆红素</td><td>11.40</td><td>μmol/L</td><td class="ref">2-15.22</td></tr>
+        <tr><td>GLOB 球蛋白</td><td>29.96</td><td>g/L</td><td class="ref">20-35</td></tr>
+        <tr><td>A/G 白球比</td><td>1.5</td><td>—</td><td class="ref">1.5-2.5</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.7.27-血清5.png" alt="胆红素/蛋白"><figcaption>胆红素 / 蛋白</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🩹 血清6 · 凝血功能（血浆）<span class="tag">沃芬</span></h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr class="ok"><td>PT 凝血酶原时间</td><td>11.60</td><td>s</td><td class="ref">9.4-12.5</td></tr>
+        <tr class="ok"><td>INR</td><td>1.07</td><td>—</td><td class="ref">0.85-1.4</td></tr>
+        <tr class="ok"><td>APTT</td><td>31.50</td><td>s</td><td class="ref">25.1-36.5</td></tr>
+        <tr class="ok"><td>TT</td><td>16.10</td><td>s</td><td class="ref">10.3-16.6</td></tr>
+        <tr class="ok"><td>FIB 纤维蛋白原</td><td>2.66</td><td>g/L</td><td class="ref">2.38-4.96</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.7.27-血清6.png" alt="凝血功能"><figcaption>凝血功能</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🧪 血清7 · 乙肝表面抗原</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr class="low"><td>HBsAg 乙肝表面抗原</td><td class="flag">1169.804 ↑</td><td>ng/ml</td><td class="ref">&lt;0.05</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.7.27-血清7.png" alt="HBsAg"><figcaption>乙肝表面抗原</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🧪 血清8 · 乙肝两对半定量</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>参考</th></tr>
+        <tr class="low"><td>HBsAg 乙肝表面抗原</td><td class="flag">&gt;250.0000 ↑</td><td class="ref">&lt;0.05</td></tr>
+        <tr><td>HBsAb 乙肝表面抗体</td><td>&lt;4.0000</td><td class="ref">&lt;10</td></tr>
+        <tr><td>HBeAg e抗原</td><td>&lt;0.0400</td><td class="ref">&lt;0.100</td></tr>
+        <tr class="up"><td>HBeAb e抗体</td><td class="flag">0.336 ↑</td><td class="ref">&lt;0.200</td></tr>
+        <tr class="up"><td>HBcAb 乙肝核心抗体</td><td class="flag">&gt;10.000 ↑</td><td class="ref">&lt;0.600</td></tr>
+      </table>
+      <div class="note">HBsAg 阳性、e抗原阴性、e抗体/核心抗体阳性 —— <b>乙肝"小三阳"倾向</b>。</div>
+      <div class="imgs"><figure><img src="assets/2026.7.27-血清8.png" alt="乙肝两对半"><figcaption>乙肝两对半</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🧪 血清9 · 肝功能组合</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr><td>TBIL 总胆红素</td><td>16.00</td><td>μmol/L</td><td class="ref">&lt;21</td></tr>
+        <tr><td>DBIL 直接胆红素</td><td>4.60</td><td>μmol/L</td><td class="ref">&lt;6.8</td></tr>
+        <tr><td>ALT 谷丙转氨酶</td><td>20</td><td>U/L</td><td class="ref">0-42</td></tr>
+        <tr><td>AST 谷草转氨酶</td><td>23</td><td>U/L</td><td class="ref">0-40</td></tr>
+        <tr><td>GGT 谷氨酰转肽酶</td><td>34</td><td>U/L</td><td class="ref">2-73</td></tr>
+        <tr><td>ALP 碱性磷酸酶</td><td>83</td><td>U/L</td><td class="ref">46-116</td></tr>
+        <tr><td>LDH 乳酸脱氢酶</td><td>156</td><td>U/L</td><td class="ref">109-245</td></tr>
+        <tr><td>TP 总蛋白</td><td>73.80</td><td>g/L</td><td class="ref">60-85</td></tr>
+        <tr><td>ALB 白蛋白</td><td>43.84</td><td>g/L</td><td class="ref">35-55</td></tr>
+        <tr><td>BUN 尿素氮</td><td>4.43</td><td>mmol/L</td><td class="ref">1.7-8.3</td></tr>
+        <tr><td>CREA 肌酐</td><td>69</td><td>μmol/L</td><td class="ref">45-104</td></tr>
+        <tr><td>URIC 尿酸</td><td>306</td><td>μmol/L</td><td class="ref">170-420</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.7.27-血清9.png" alt="肝功能"><figcaption>肝功能组合</figcaption></figure></div>
+    </div>
+  </section>
+
+  <!-- ============ 2026.7.28 ============ -->
+  <section class="section">
+    <div class="tbar"><span class="badge amber"></span><h2>超声检查</h2><span class="date">2026.7.28</span></div>
+
+    <div class="card">
+      <h3>🖥 肝脏弹性成像</h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>参考</th></tr>
+        <tr class="low"><td>肝脏硬度中位数</td><td class="flag">13.22 kPa（2.10 m/s）</td><td class="ref">Fibrosis 分级</td></tr>
+        <tr class="low"><td>纤维化程度</td><td class="flag">符合 F4（硬化）</td><td class="ref">—</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.7.28-超声（肝胆纤维）.png" alt="2026.7.28 肝脏弹性"><figcaption>肝脏弹性成像</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🖥 肝胆胰脾超声</h3>
+      <div class="desc">肠气干扰；肝实质回声增粗、分布欠均匀，门静脉内径约 13mm（增宽）；胆囊壁毛糙，胆囊颈口多发细小强回声光团约 32×13mm；脾厚 46mm、长径 143mm、脾静脉宽 10mm；胰腺显示欠清。
+<b>提示：肝硬化声像考虑；门静脉增宽；胆囊结石；脾大。</b></div>
+      <div class="imgs"><figure><img src="assets/2026.7.28-超声（肝胆胰脾）.png" alt="2026.7.28 超声"><figcaption>肝胆胰脾</figcaption></figure></div>
+    </div>
+  </section>
+
+  <!-- ============ 2026.10.12 ============ -->
+  <section class="section">
+    <div class="tbar"><span class="badge blue"></span><h2>急诊复查</h2><span class="date">2026.10.12</span></div>
+
+    <div class="card">
+      <h3>🩸 全血（血常规）<span class="tag">迈瑞 BC7500</span></h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr><td>WBC 白细胞</td><td>4.61</td><td>10⁹/L</td><td class="ref">3.5-9.5</td></tr>
+        <tr><td>RBC 红细胞</td><td>4.92</td><td>10¹²/L</td><td class="ref">4.3-5.8</td></tr>
+        <tr><td>HGB 血红蛋白</td><td>151</td><td>g/L</td><td class="ref">130-175</td></tr>
+        <tr class="low"><td>PLT 血小板</td><td class="flag">79 ↓</td><td>10⁹/L</td><td class="ref">125-350</td></tr>
+        <tr class="low"><td>LYM# 淋巴细胞计数</td><td class="flag">1.09 ↓</td><td>10⁹/L</td><td class="ref">1.1-3.2</td></tr>
+        <tr class="up"><td>MPV 平均血小板体积</td><td class="flag">13.1 ↑</td><td>fL</td><td class="ref">6.5-12</td></tr>
+        <tr class="up"><td>PDW 血小板分布宽度</td><td class="flag">17.1 ↑</td><td>%</td><td class="ref">9-17</td></tr>
+        <tr class="up"><td>P-LCR 大型血小板比率</td><td class="flag">47.5 ↑</td><td>%</td><td class="ref">11-45</td></tr>
+        <tr><td>CRP C反应蛋白</td><td>&lt;6.00</td><td>mg/L</td><td class="ref">0-10</td></tr>
+      </table>
+      <div class="note">⚠️ 血小板降至 79，为历次最低，请重点关注。</div>
+      <div class="imgs"><figure><img src="assets/2026.10.12-全血.png" alt="2026.10.12 全血"><figcaption>全血</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🩹 血浆 · 凝血功能 <span class="tag">SF9200</span></h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr class="ok"><td>PT 凝血酶原时间</td><td>13.30</td><td>s</td><td class="ref">11-14</td></tr>
+        <tr class="ok"><td>INR</td><td>1.07</td><td>—</td><td class="ref">0.8-1.24</td></tr>
+        <tr class="ok"><td>APTT</td><td>33.30</td><td>s</td><td class="ref">27-45</td></tr>
+        <tr class="ok"><td>TT</td><td>15.40</td><td>s</td><td class="ref">&lt;20</td></tr>
+        <tr class="ok"><td>FIB 纤维蛋白原</td><td>2.53</td><td>g/L</td><td class="ref">2-4</td></tr>
+        <tr class="ok"><td>D-二聚体</td><td>0.19</td><td>mg/L</td><td class="ref">&lt;0.5</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.10.12-血浆.png" alt="2026.10.12 血浆"><figcaption>血浆 · 凝血</figcaption></figure></div>
+    </div>
+
+    <div class="card">
+      <h3>🧪 血清 · 肝/肾/心肌生化 <span class="tag">强森 7600</span></h3>
+      <table>
+        <tr><th>项目</th><th>结果</th><th>单位</th><th>参考</th></tr>
+        <tr><td>TBIL 总胆红素</td><td>15.36</td><td>μmol/L</td><td class="ref">3-22</td></tr>
+        <tr><td>DBIL 结合胆红素</td><td>4.39</td><td>μmol/L</td><td class="ref">0-6.84</td></tr>
+        <tr><td>IBIL 非结合胆红素</td><td>10.97</td><td>μmol/L</td><td class="ref">2-15.22</td></tr>
+        <tr><td>ALT 谷丙转氨酶</td><td>27</td><td>U/L</td><td class="ref">0-50</td></tr>
+        <tr><td>AST 谷草转氨酶</td><td>26</td><td>U/L</td><td class="ref">15-46</td></tr>
+        <tr><td>ALP 碱性磷酸酶</td><td>78</td><td>U/L</td><td class="ref">38-126</td></tr>
+        <tr><td>GGT 谷氨酰转肽酶</td><td>41</td><td>U/L</td><td class="ref">12-58</td></tr>
+        <tr><td>LDH 乳酸脱氢酶</td><td>156</td><td>U/L</td><td class="ref">120-246</td></tr>
+        <tr><td>TP 总蛋白</td><td>73.30</td><td>g/L</td><td class="ref">63-82</td></tr>
+        <tr><td>ALB 白蛋白</td><td>45.10</td><td>g/L</td><td class="ref">35-50</td></tr>
+        <tr><td>GLOB 球蛋白</td><td>28.20</td><td>g/L</td><td class="ref">20-35</td></tr>
+        <tr><td>A/G 白球比</td><td>1.6</td><td>—</td><td class="ref">1.5-2.5</td></tr>
+        <tr><td>CHE 胆碱酯酶</td><td>7682</td><td>U/L</td><td class="ref">5900-12220</td></tr>
+        <tr><td>BUN 尿素氮</td><td>5.54</td><td>mmol/L</td><td class="ref">3.2-7.1</td></tr>
+        <tr><td>CREA 肌酐</td><td>71</td><td>μmol/L</td><td class="ref">58-110</td></tr>
+        <tr><td>URIC 尿酸</td><td>299</td><td>μmol/L</td><td class="ref">208-430</td></tr>
+        <tr class="low"><td>CK 肌酸激酶</td><td class="flag">43 ↓</td><td>U/L</td><td class="ref">55-170</td></tr>
+        <tr><td>CK-MB</td><td>11</td><td>U/L</td><td class="ref">0-25</td></tr>
+        <tr><td>MYOG 肌红蛋白</td><td>22.80</td><td>ng/ml</td><td class="ref">≤121</td></tr>
+        <tr><td>TBA 总胆汁酸</td><td>5.4</td><td>μmol/L</td><td class="ref">0.5-10</td></tr>
+      </table>
+      <div class="imgs"><figure><img src="assets/2026.10.12-血清.png" alt="2026.10.12 血清"><figcaption>血清 · 生化</figcaption></figure></div>
+    </div>
+  </section>
+
+  <footer>报告由项目原始检查单图片整理生成 · 仅供健康参考，请遵医嘱。</footer>
+</div>
+</body>
+</html>
